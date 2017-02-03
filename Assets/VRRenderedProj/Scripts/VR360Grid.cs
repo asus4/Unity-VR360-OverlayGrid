@@ -6,6 +6,7 @@ public class VR360Grid : MonoBehaviour
 {
     public float OffsetFromSphere = 0f;
 
+    [SerializeField]
     public List<Vector3> positions = new List<Vector3>();
 
     public int width = 4;

@@ -1,27 +1,41 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 using UnityEditor;
-using System.Collections;
 
 [CustomEditor(typeof(VR360Grid))]
 [CanEditMultipleObjects]
 public class VR360GridEditor : Editor
 {
+    VR360Grid grid;
+    List<Vector3> undoPositions;
 
     void OnSceneGUI()
     {
-        VR360Grid grid = (VR360Grid)target;
+        EventType eventType = Event.current.type;
 
-        for (int i = 0; i < grid.positions.Count; i++)
+        var positions = grid.positions;
+        for (int i = 0; i < positions.Count; i++)
         {
-            Vector3 pos = grid.positions[i];
+            Vector3 pos = positions[i];
             Vector3 newPos = Handles.FreeMoveHandle(pos, Quaternion.identity, .03f, new Vector3(.5f, .5f, .5f), Handles.SphereCap);
             Handles.Label(pos, "Pos" + i);
             if (pos != newPos)
             {
                 newPos = findPositiontOnProjectionFromCamera(newPos, grid.OffsetFromSphere);
-
-                grid.positions[i] = newPos;
+                positions[i] = newPos;
             }
+        }
+
+        switch (eventType)
+        {
+            case EventType.MouseDown:
+                undoPositions = new List<Vector3>(grid.positions);
+                break;
+            case EventType.MouseUp:
+                grid.positions = new List<Vector3>(undoPositions);
+                Undo.RecordObject(grid, "Move Grid");
+                grid.positions = positions;
+                break;
         }
 
         if (grid.GetComponent<MeshFilter>() != null)
@@ -38,7 +52,7 @@ public class VR360GridEditor : Editor
             {
                 for (int j = 0; j < grid.height + 1; j++)
                 {
-                    Handles.DotCap(0, GetPos(i, j), Quaternion.identity, 0.01f);
+                    Handles.DotCap(0, GetPos(i, j), Quaternion.identity, 0.005f);
                 }
             }
         }
@@ -46,8 +60,6 @@ public class VR360GridEditor : Editor
 
     Vector3 GetPos(int i, int j)
     {
-        VR360Grid grid = (VR360Grid)target;
-
         float hor = (i * 1.0f) / grid.width;
         float ver = (j * 1.0f) / grid.height;
 
@@ -69,8 +81,6 @@ public class VR360GridEditor : Editor
 
     void CreateGrid(bool forceCreate = false)
     {
-        VR360Grid grid = (VR360Grid)target;
-
         MeshFilter meshFilter = grid.gameObject.GetComponent<MeshFilter>();
         if (meshFilter == null)
         {
@@ -129,8 +139,6 @@ public class VR360GridEditor : Editor
 
     public override void OnInspectorGUI()
     {
-        VR360Grid grid = (VR360Grid)target;
-
         this.DrawDefaultInspector();
 
         for (int i = 0; i < grid.positions.Count; i++)
@@ -215,6 +223,7 @@ public class VR360GridEditor : Editor
     Tool LastTool = Tool.None;
     void OnEnable()
     {
+        grid = (VR360Grid)target;
         LastTool = Tools.current;
         Tools.current = Tool.None;
     }
